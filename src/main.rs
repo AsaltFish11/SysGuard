@@ -1,3 +1,5 @@
+mod util;
+
 use iced::border::Radius;
 use iced::widget::button::Status;
 use iced::widget::{
@@ -14,24 +16,25 @@ use iced::{
     Theme
 };
 use sysinfo::{ProcessesToUpdate, System};
+use util::*;
 
-const NAV_BUTTON_TEXT: [&str; 3] = ["首页", "设置", "测试页1"];
+const NAV_BUTTON_TEXT: [&str; 3] = ["首页", "进程", "设置"];
 const NAV_BUTTON_WIDTH: f32 = 200.0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 enum Page {
     #[default]
     Home,
+    Process,
     Settings,
-    Test1,
 }
 
 impl Page {
     fn page_idx(&self) -> usize {
         match self {
             Page::Home => 0,
-            Page::Settings => 1,
-            Page::Test1 => 2,
+            Page::Process => 1,
+            Page::Settings => 2,
         }
     }
 }
@@ -40,6 +43,8 @@ impl Page {
 enum Message {
     NavTo(Page),
     Refresh,
+    PrevProcPage,
+    NextProcPage,
 }
 
 #[derive(Debug, Clone)]
@@ -53,14 +58,15 @@ struct ProcessEntry {
 struct SysGuard {
     current_page: Page,
     current_page_button: usize,
-    processes: Vec<ProcessEntry>,
+    processes: Vec<Vec<ProcessEntry>>,
+    current_page_idx: usize,
 }
 
 fn fetch_processes() -> Vec<ProcessEntry> {
     let mut sys = System::new_all();
     sys.refresh_processes(ProcessesToUpdate::All, true);
 
-    sys.processes()
+    let mut p_vec = sys.processes()
         .iter()
         .map(|(pid, process)| ProcessEntry {
             pid: pid.as_u32(),
@@ -68,9 +74,12 @@ fn fetch_processes() -> Vec<ProcessEntry> {
             cpu: process.cpu_usage(),
             memory: process.memory(),
         })
-        .collect()
+        .collect::<Vec<ProcessEntry>>();
+    p_vec.sort_by(|a, b| {
+        a.pid.cmp(&b.pid)
+    });
+    p_vec
 }
-
 fn create_nav_button(
     nav_button_idx: usize,
     on_press: Message,
@@ -116,7 +125,8 @@ impl SysGuard {
         Self {
             current_page: Page::Home,
             current_page_button: 0,
-            processes: Vec::new(),
+            processes: list_pagination(fetch_processes(), 30),
+            current_page_idx: 0,
         }
     }
 
@@ -125,13 +135,20 @@ impl SysGuard {
             Message::NavTo(page) => {
                 self.current_page = page;
                 self.current_page_button = self.current_page.page_idx();
-                if page == Page::Home {
-                    self.processes = fetch_processes();
-                }
-            }
+            },
             Message::Refresh => {
-                self.processes = fetch_processes();
-            }
+                self.processes = list_pagination(fetch_processes(), 30);
+            },
+            Message::PrevProcPage => {
+                if self.current_page_idx > 0 {
+                    self.current_page_idx -= 1;
+                }
+            },
+            Message::NextProcPage => {
+                if self.current_page_idx < self.processes.len() - 1 {
+                    self.current_page_idx += 1;
+                }
+            },
         }
     }
 
@@ -140,8 +157,8 @@ impl SysGuard {
         let navbar = container(
             column![
                 create_nav_button(0, Message::NavTo(Page::Home), self.current_page_button),
-                create_nav_button(1, Message::NavTo(Page::Settings), self.current_page_button),
-                create_nav_button(2, Message::NavTo(Page::Test1), self.current_page_button),
+                create_nav_button(1, Message::NavTo(Page::Process), self.current_page_button),
+                create_nav_button(2, Message::NavTo(Page::Settings), self.current_page_button),
             ]
                 .height(Fill)
                 .width(Fill)
@@ -157,22 +174,40 @@ impl SysGuard {
         // 页面内容逻辑
         let content: Element<'_, Message, Theme> = match self.current_page {
             Page::Home => {
-                let process_list: Vec<Element<'_, Message, Theme>> = self.processes
+                column![
+                    text("这是首页").size(30),
+                    text("这是首页重复1").size(30)
+                ]
+                    .into()
+            }
+            Page::Process => {
+                let pid_list: Vec<Element<'_, Message, Theme>> = self.processes[self.current_page_idx]
                     .iter()
-                    .map(|p| {
-                        row![
-                            text(format!("{}", p.pid)).width(80),
-                            text(&p.name).width(200),
-                            text(format!("{:.1}%", p.cpu)).width(80),
-                            text(format!("{} KB", p.memory / 1024)).width(100),
-                        ].into()
-                    })
+                    .map(|p| { text(format!("{}", p.pid)).into() })
+                    .collect();
+                let name_list: Vec<Element<'_, Message, Theme>> = self.processes[self.current_page_idx]
+                    .iter()
+                    .map(|p| { text(p.name.clone()).into() })
                     .collect();
 
+                // text(&p.name),
+                // text(format!("{:.1}%", p.cpu)),
+                // text(format!("{} KB", p.memory / 1024)),
                 column![
-                    button("刷新").on_press(Message::Refresh),
-                    scrollable(column(process_list).spacing(10))
+                    scrollable(
+                        row![
+                            column(pid_list).spacing(10),
+                            column(name_list).spacing(10)
+                        ]
+                    ).width(Fill).height(Fill),
+                    row![
+                        button("刷新").on_press(Message::Refresh),
+                        button("上一页").on_press(Message::PrevProcPage),
+                        button("下一页").on_press(Message::NextProcPage),
+                        text!("第 {} 页，共 {} 页", self.current_page_idx + 1, self.processes.len())
+                    ],
                 ]
+                    .align_x(Alignment::Center)
                     .into()
             }
             Page::Settings => {
@@ -182,20 +217,11 @@ impl SysGuard {
                 ]
                     .into()
             }
-            Page::Test1 => {
-                column![
-                    text("这是测试页面").size(30),
-                    text("这是测试页面重复1").size(30),
-                ]
-                    .into()
-            }
         };
 
         let page_body = container(content)
             .width(FillPortion(5))
             .height(Fill)
-            .center_x(Fill)
-            .center_y(Fill)
             .style(|_| {
                 container::Style::default()
                     .background(Background::Color(color!(18, 18, 18, 0.9)))
