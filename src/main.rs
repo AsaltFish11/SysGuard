@@ -184,8 +184,8 @@ impl SysGuard {
             }
             Page::Test1 => {
                 column![
-                    text("这是日志页面").size(30),
-                    text("这是日志页面重复1").size(30),
+                    text("这是测试页面").size(30),
+                    text("这是测试页面重复1").size(30),
                 ]
                     .into()
             }
