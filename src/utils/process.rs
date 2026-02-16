@@ -1,5 +1,6 @@
 use sysinfo::{ProcessesToUpdate, System};
 
+#[derive(Clone)]
 pub struct ProcessEntry {
     pub pid: u32,
     pub name: String

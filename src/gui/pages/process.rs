@@ -1,5 +1,9 @@
 use iced::{color, Alignment, Background, Element, Fill, Theme};
-use iced::widget::{container, mouse_area, row, text, column, scrollable, button};
+use iced::widget::{
+    container, mouse_area, row,
+    text, column, scrollable, button,
+    text_input
+};
 use super::super::app::SysGuard;
 use super::super::message::Event;
 
@@ -12,7 +16,6 @@ pub fn view(sys_guard: &SysGuard) -> Element<'_, Event, Theme> {
                 text(process.pid.to_string()).width(80),
                 text(&process.name).width(200)
             ]
-            .spacing(10)
             .align_y(Alignment::Center)
             .padding(5);
 
@@ -33,7 +36,21 @@ pub fn view(sys_guard: &SysGuard) -> Element<'_, Event, Theme> {
         }).collect();
         column![
             scrollable(
-                column(proc_list)
+                column![
+                    row![
+                        text_input(
+                            "从进程名筛选进程...",
+                            &sys_guard.filtering_process_input_content,
+                        ).on_input(Event::UpdateFilteringProcessInput),
+                        button("筛选")
+                            .on_press(Event::FilterProcess)
+                    ].padding(5),
+                    row![
+                        text("Pid").width(80),
+                        text("Name").width(200)
+                    ].padding(5),
+                    column(proc_list)
+                ]
             ).width(Fill).height(Fill),
             row![
                 button("刷新").on_press(Event::Refresh),

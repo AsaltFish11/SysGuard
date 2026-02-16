@@ -25,7 +25,7 @@ impl Page {
 
 pub fn view<'a>(
     page: &Page,
-    sys_guard: &'a SysGuard
+    sys_guard: &'a SysGuard,
 ) -> Element<'a, Event, Theme> {
     match page {
         Page::Home => home::view(),

@@ -1,7 +1,7 @@
 use iced::{Element, Theme, color, Background, Fill, Alignment};
 use iced::border::Radius;
 use iced::Length::Fixed;
-use iced::widget::{Button, button, column, container, row};
+use iced::widget::{Button, button, column, container, row, text_input};
 use iced::window::Settings;
 use super::pages::{
     view, Page
@@ -9,15 +9,17 @@ use super::pages::{
 use super::super::constant::*;
 use super::message::Event;
 use super::super::utils::process::*;
-use super::super::utils::handle::list_pagination;
+use super::super::utils::handle::*;
 
 
 pub struct SysGuard {
     current_page: Page,
     current_page_button: usize,
     pub processes: Vec<Vec<ProcessEntry>>,
+    pub processes_v: Vec<ProcessEntry>,
     pub current_page_idx: usize,
     pub select_proc: Option<usize>,
+    pub filtering_process_input_content: String,
 }
 fn create_nav_button(
     nav_button_idx: usize,
@@ -63,9 +65,11 @@ impl SysGuard {
         SysGuard {
             current_page: Page::Home,
             current_page_button: 0,
+            processes_v: fetch_processes(),
             processes: list_pagination(fetch_processes(), PROC_PAGE_SIZE),
             current_page_idx: 0,
             select_proc: None,
+            filtering_process_input_content: String::new(),
         }
     }
 
@@ -76,7 +80,9 @@ impl SysGuard {
                 self.current_page_button = page.page_idx();
             },
             Event::Refresh => {
-                self.processes = list_pagination(fetch_processes(), PROC_PAGE_SIZE);
+                self.processes_v = fetch_processes();
+                self.processes = list_pagination(self.processes_v.clone(), PROC_PAGE_SIZE);
+
             },
             Event::PrevProcPage => {
                 if self.current_page_idx > 0 {
@@ -90,6 +96,22 @@ impl SysGuard {
             },
             Event::UpdateSelectProc(pid) => {
                 self.select_proc = Some(pid);
+            },
+            Event::UpdateFilteringProcessInput(content) => {
+                self.filtering_process_input_content = content;
+            }
+            Event::FilterProcess => {
+                self.current_page_idx = 0;
+                let mut tmp_proc_vec = Vec::new();
+                for process in self.processes_v.iter() {
+                    if process.name.contains(&self.filtering_process_input_content) {
+                        tmp_proc_vec.push(process.clone());
+                    }
+                }
+                self.processes = list_pagination(tmp_proc_vec, PROC_PAGE_SIZE);
+                // self.processes = self.processes_v.iter().map(|processes| {
+                //     processes.name.contains(&self.filtering_process_input_content)
+                // })
             }
         }
     }

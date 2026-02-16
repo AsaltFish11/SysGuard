@@ -7,4 +7,6 @@ pub enum Event {
     PrevProcPage,
     NextProcPage,
     UpdateSelectProc(usize),
+    UpdateFilteringProcessInput(String),
+    FilterProcess,
 }
