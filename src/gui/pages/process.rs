@@ -2,9 +2,9 @@ use iced::{color, Alignment, Background, Element, Fill, Theme};
 use iced::widget::{
     container, mouse_area, row,
     text, column, scrollable, button,
-    text_input
+    text_input, pick_list
 };
-use super::super::app::SysGuard;
+use super::super::app::{SysGuard, FilterOptions};
 use super::super::message::Event;
 
 pub fn view(sys_guard: &SysGuard) -> Element<'_, Event, Theme> {
@@ -14,7 +14,7 @@ pub fn view(sys_guard: &SysGuard) -> Element<'_, Event, Theme> {
             let is_selected = sys_guard.select_proc == Some(index);
             let row_content = row![
                 text(process.pid.to_string()).width(80),
-                text(&process.name).width(200)
+                text(&process.name).width(Fill)
             ]
             .align_y(Alignment::Center)
             .padding(5);
@@ -34,31 +34,40 @@ pub fn view(sys_guard: &SysGuard) -> Element<'_, Event, Theme> {
                 })
                 .into()
         }).collect();
-        column![
-            scrollable(
-                column![
-                    row![
-                        text_input(
-                            "从进程名筛选进程...",
-                            &sys_guard.filtering_process_input_content,
-                        ).on_input(Event::UpdateFilteringProcessInput),
-                        button("筛选")
-                            .on_press(Event::FilterProcess)
-                    ].padding(5),
-                    row![
-                        text("Pid").width(80),
-                        text("Name").width(200)
-                    ].padding(5),
-                    column(proc_list)
-                ]
-            ).width(Fill).height(Fill),
-            row![
-                button("刷新").on_press(Event::Refresh),
-                button("上一页").on_press(Event::PrevProcPage),
-                button("下一页").on_press(Event::NextProcPage),
-                text!("第 {} 页，共 {} 页", sys_guard.current_page_idx + 1, sys_guard.processes.len())
-            ].width(Fill),
-        ]
-            .align_x(Alignment::Center)
-            .into()
+    let filter_options = [
+        FilterOptions::Name,
+        FilterOptions::Pid,
+    ];
+    column![
+        scrollable(
+            column![
+                row![
+                    pick_list(
+                        filter_options,
+                        Some(sys_guard.filter_option),
+                        Event::UpdateFilterOption
+                    ),
+                    text_input(
+                        format!("从{}筛选进程...", sys_guard.filter_option).as_str(),
+                        &sys_guard.filtering_process_input_content,
+                    ).on_input(Event::UpdateFilteringProcessInput),
+                    button("筛选")
+                        .on_press(Event::FilterProcess)
+                ].padding(5),
+                row![
+                    text("Pid").width(80),
+                    text("Name").width(200)
+                ].padding(5),
+                column(proc_list)
+            ]
+        ).width(Fill).height(Fill),
+        row![
+            button("刷新").on_press(Event::Refresh),
+            button("上一页").on_press(Event::PrevProcPage),
+            button("下一页").on_press(Event::NextProcPage),
+            text!("第 {} 页，共 {} 页", sys_guard.current_page_idx + 1, sys_guard.processes.len())
+        ].width(Fill),
+    ]
+        .align_x(Alignment::Center)
+        .into()
 }

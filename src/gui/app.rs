@@ -1,7 +1,7 @@
 use iced::{Element, Theme, color, Background, Fill, Alignment};
 use iced::border::Radius;
 use iced::Length::Fixed;
-use iced::widget::{Button, button, column, container, row, text_input};
+use iced::widget::{Button, button, column, container, row};
 use iced::window::Settings;
 use super::pages::{
     view, Page
@@ -11,6 +11,19 @@ use super::message::Event;
 use super::super::utils::process::*;
 use super::super::utils::handle::*;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FilterOptions {
+    Pid,
+    Name,
+}
+impl std::fmt::Display for FilterOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Pid => "进程 ID",
+            Self::Name => "进程名",
+        })
+    }
+}
 
 pub struct SysGuard {
     current_page: Page,
@@ -20,6 +33,7 @@ pub struct SysGuard {
     pub current_page_idx: usize,
     pub select_proc: Option<usize>,
     pub filtering_process_input_content: String,
+    pub filter_option: FilterOptions,
 }
 fn create_nav_button(
     nav_button_idx: usize,
@@ -70,6 +84,7 @@ impl SysGuard {
             current_page_idx: 0,
             select_proc: None,
             filtering_process_input_content: String::new(),
+            filter_option: FilterOptions::Name,
         }
     }
 
@@ -95,6 +110,10 @@ impl SysGuard {
                 }
             },
             Event::UpdateSelectProc(pid) => {
+                if self.select_proc == Some(pid) {
+                    self.select_proc = None;
+                    return;
+                }
                 self.select_proc = Some(pid);
             },
             Event::UpdateFilteringProcessInput(content) => {
@@ -104,14 +123,23 @@ impl SysGuard {
                 self.current_page_idx = 0;
                 let mut tmp_proc_vec = Vec::new();
                 for process in self.processes_v.iter() {
-                    if process.name.contains(&self.filtering_process_input_content) {
-                        tmp_proc_vec.push(process.clone());
+                    match self.filter_option {
+                        FilterOptions::Pid => {
+                            if process.pid.to_string().contains(&self.filtering_process_input_content) {
+                                tmp_proc_vec.push(process.clone());
+                            }
+                        },
+                        FilterOptions::Name => {
+                            if process.name.contains(&self.filtering_process_input_content) {
+                                tmp_proc_vec.push(process.clone());
+                            }
+                        }
                     }
                 }
                 self.processes = list_pagination(tmp_proc_vec, PROC_PAGE_SIZE);
-                // self.processes = self.processes_v.iter().map(|processes| {
-                //     processes.name.contains(&self.filtering_process_input_content)
-                // })
+            },
+            Event::UpdateFilterOption(option) => {
+                self.filter_option = option;
             }
         }
     }

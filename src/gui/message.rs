@@ -1,4 +1,5 @@
 use super::pages::Page;
+use super::app::FilterOptions;
 
 #[derive(Debug, Clone)]
 pub enum Event {
@@ -9,4 +10,5 @@ pub enum Event {
     UpdateSelectProc(usize),
     UpdateFilteringProcessInput(String),
     FilterProcess,
+    UpdateFilterOption(FilterOptions),
 }
