@@ -1,5 +1,5 @@
 use super::pages::Page;
-use super::app::FilterOptions;
+use super::app::{FilterOptions, ProcessOperation};
 
 #[derive(Debug, Clone)]
 pub enum Event {
@@ -11,4 +11,5 @@ pub enum Event {
     UpdateFilteringProcessInput(String),
     FilterProcess,
     UpdateFilterOption(FilterOptions),
+    PerformProcessOperations(ProcessOperation)
 }

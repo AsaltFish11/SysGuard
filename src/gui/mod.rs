@@ -1,3 +1,3 @@
-mod message;
+mod event;
 pub mod app;
 mod pages;

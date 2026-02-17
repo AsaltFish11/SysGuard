@@ -2,12 +2,13 @@ use iced::{Element, Theme, color, Background, Fill, Alignment};
 use iced::border::Radius;
 use iced::Length::Fixed;
 use iced::widget::{Button, button, column, container, row};
-use iced::window::Settings;
+use iced::window;
+use sysinfo::{Pid, ProcessesToUpdate, System};
 use super::pages::{
     view, Page
 };
 use super::super::constant::*;
-use super::message::Event;
+use super::event::Event;
 use super::super::utils::process::*;
 use super::super::utils::handle::*;
 
@@ -24,6 +25,20 @@ impl std::fmt::Display for FilterOptions {
         })
     }
 }
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProcessOperation {
+    DefaultPrompt,
+    KillProcess
+}
+impl std::fmt::Display for ProcessOperation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::DefaultPrompt => "选择要执行的操作",
+            Self::KillProcess => "结束选中进程",
+        })
+    }
+}
+
 
 pub struct SysGuard {
     current_page: Page,
@@ -140,6 +155,27 @@ impl SysGuard {
             },
             Event::UpdateFilterOption(option) => {
                 self.filter_option = option;
+            },
+            Event::PerformProcessOperations(operations) => {
+                println!("执行操作： {}", operations);
+                match operations {
+                    ProcessOperation::KillProcess => {
+                        if let Some(proc_idx) = self.select_proc {
+                            let u_select_pif = self.processes[self.current_page_idx][proc_idx].pid;
+                            let mut system = System::new_all();
+                            // 刷新所有进程
+                            system.refresh_processes(ProcessesToUpdate::All, true);
+                            if let Some(process) = system.process(Pid::from_u32(u_select_pif)) {
+                                process.kill();
+                            }else {
+                                println!("进程不存在")
+                            }
+                        }else {
+                            println!("请选择进程")
+                        }
+                    },
+                    ProcessOperation::DefaultPrompt => {}
+                }
             }
         }
     }
@@ -167,7 +203,7 @@ impl SysGuard {
         ].into()
     }
 }
-pub fn start(settings: Settings) -> iced::Result {
+pub fn start(settings: window::Settings) -> iced::Result {
     iced::application(
         || SysGuard::new(),
         SysGuard::update,

@@ -4,7 +4,7 @@ mod settings;
 
 use iced::{Element, Theme};
 use crate::gui::app::SysGuard;
-use super::message::Event;
+use super::event::Event;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Page {
