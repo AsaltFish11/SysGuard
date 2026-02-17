@@ -1,1 +1,1 @@
-test text
+基于Rust和iced编写的系统管理软件
