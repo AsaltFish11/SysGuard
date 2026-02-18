@@ -78,7 +78,8 @@ pub fn view(sys_guard: &SysGuard) -> Element<'_, Event, Theme> {
             text!("第 {} 页，共 {} 页", sys_guard.current_page_idx + 1, sys_guard.processes.len()),
             pick_list(
                 [
-                    ProcessOperation::KillProcess
+                    ProcessOperation::KillProcess,
+                    ProcessOperation::GetProcessDetailedInformation,
                 ],
                 Some(ProcessOperation::DefaultPrompt),
                 Event::PerformProcessOperations
